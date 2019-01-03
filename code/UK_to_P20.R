@@ -12,21 +12,6 @@ if(.Platform$OS.type == "unix"){
 wd = paste0(prefix,"/git/aid_to_p20")
 setwd(wd)
 
-# load("E:/git/p20_hum_cap/project_data/crs.RData")
-# 
-# 
-# # crs = subset(crs,DonorName=="United Kingdom")
-# crs = subset(crs,FlowName %in% c("ODA Grants","ODA Loans"))
-# 
-# crs = data.table(crs)[
-#   ,.(
-#     commitment_value=sum(usd_commitment_defl,na.rm=T)
-#     ,disbursement_value=sum(usd_disbursement_defl,na.rm=T)
-#   )
-#   ,by=.(DonorName,RecipientCode,RecipientName,Year)
-#   ]
-# 
-# save(crs,file="data/recipient_donor_year.RData")
 load("data/recipient_donor_year.RData")
 
 crs=crs[which(crs$Year>2000),]
@@ -82,13 +67,9 @@ ggplot(povcal[which(povcal$DonorName %in% c("United States","United Kingdom", "F
 ggplot(povcal[which(povcal$DonorName %in% c("United Kingdom") & RequestYear==2015)]
        ,aes(log(aid_per_personc), ExtPovHC, colour=RequestYear))+
   geom_point()+
-  ggtitle("Aid Commitments vs Share in Poverty 2015")+
+  ggtitle("UK Aid Commitments vs Share in Poverty")+
   theme_bw()+
   ylab("Share of recipient \npopulation in extreme poverty")+
-  xlab("ODA commitments per capita (logged)")+
+  xlab("2015 ODA commitments per capita (logged)")+
   theme(legend.position="none")
 
-
-UK2015=povcal[which(povcal$DonorName=="United Kingdom" & povcal$RequestYear==2015),]
-plot(log(UK2015$aid_per_person_in_p20),UK2015$P20Headcount)
-plot(log(UK2015$aid_per_person_in_p20),UK2015$P20pop)

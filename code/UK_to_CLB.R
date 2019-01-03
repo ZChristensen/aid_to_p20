@@ -68,32 +68,43 @@ clb=c(
   ,"Zambia" 
 )
 
-crs$clb="Other Countries"
-crs$clb[which(crs$CountryName %in% clb)]="Countries left behind"
+crs$clb=0
+crs$clb[which(crs$CountryName %in% clb)]=1
 
 
 aidtotals=data.table(crs)[
   ,.(
-    commitment_value=mean(commitment_value,na.rm=T)
-    ,disbursement_value=mean(disbursement_value,na.rm=T)
+    commitment_value_total=sum(commitment_value,na.rm=T)
+    ,disbursement_value_total=sum(disbursement_value,na.rm=T)
   )
   ,by=.(DonorName,RequestYear)
   ]
 aidbyclb = data.table(crs)[
   ,.(
-    commitment_value=mean(commitment_value,na.rm=T)
-    ,disbursement_value=mean(disbursement_value,na.rm=T)
+    commitment_value=sum(commitment_value,na.rm=T)
+    ,disbursement_value=sum(disbursement_value,na.rm=T)
   )
   ,by=.(DonorName,RequestYear,clb)
   ]
+aidbyclb=join(aidbyclb,aidtotals,by=c("DonorName","RequestYear"))
+aidbyclb$commitment_share=aidbyclb$commitment_value/aidbyclb$commitment_value_total
+aidbyclb$disbursement_share=aidbyclb$disbursement_value/aidbyclb$disbursement_value_total
+aidbyclb$RequestYear=as.numeric(aidbyclb$RequestYear)
+aidbyclb$clb=factor(aidbyclb$clb,levels=c(0,1),labels=c("Other countries","Countries left behind"))
 
 ggplot(data=aidbyclb[which(aidbyclb$RequestYear>2010 & DonorName %in% c("United Kingdom")),], aes(y=commitment_value,x=RequestYear,fill=clb))+
   geom_bar(stat="identity")+
   ylab("Total Aid Commitments (USD millions)")+
   xlab("")+
-  ggtitle("UK ODA to countries left behind and other countries")+
-  scale_fill_discrete( name="",
-                     breaks=c("Countries left behind", "NA"),
-                     labels=c("Countries left behind", "Other countries"))
+  ggtitle("UK ODA to countries left behind and other countries")
+  # scale_fill_continuous(name="",
+  #                    breaks=c(1, 0),
+  #                    labels=c("Countries left behind", "Other countries"),
+  #                    guide="legend")
 
-       
+ggplot(data=aidbyclb[which(aidbyclb$RequestYear>2010 & DonorName %in% c("United Kingdom")),], aes(y=commitment_share,x=RequestYear,fill=clb))+
+  geom_bar(stat="identity")+
+  ylab("Total Aid Commitments (USD millions)")+
+  xlab("")+
+  ggtitle("UK ODA to countries left behind and other countries")
+

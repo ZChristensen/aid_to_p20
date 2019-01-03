@@ -1,4 +1,4 @@
-list.of.packages <- c("data.table","ggplot2")
+list.of.packages <- c("data.table","ggplot2","plyr")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, require, character.only=T)
@@ -52,9 +52,42 @@ setnames(crs,"RecipientName","CountryName")
 setnames(crs,"Year","RequestYear")
 povcal=povcalcuts[,c("P20pop","CountryName","RequestYear","ExtPovHC","P20Headcount","pop")]
 povcal=join(crs,povcal,by=c("CountryName","RequestYear"))
-povcal$aid_per_person_in_p20=povcal$commitment_value/povcal$P20pop
 
-ggplot(povcal, aes(P20pop, disbursement_value, colour=DonorName))+geom_point()
+povcal$aid_per_personc=povcal$commitment_value/povcal$pop
+povcal$aid_per_persond=povcal$disbursement_value/povcal$pop
+
+aidpercap = data.table(povcal)[
+  ,.(
+    commitment_value=mean(aid_per_personc,na.rm=T)
+    ,disbursement_value=mean(aid_per_persond,na.rm=T)
+  )
+  ,by=.(DonorName,RequestYear)
+  ]
+
+# UK=ggplot(povcal[which(povcal$DonorName %in% c("United Kingdom") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("United Kingdom")
+# US=ggplot(povcal[which(povcal$DonorName %in% c("United States") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("United States")
+# FR=ggplot(povcal[which(povcal$DonorName %in% c("France") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("France")
+# DE=ggplot(povcal[which(povcal$DonorName %in% c("Germany") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("Germany")
+# CA=ggplot(povcal[which(povcal$DonorName %in% c("Canada") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("Canada")
+ggplot(povcal[which(povcal$DonorName %in% c("United States","United Kingdom", "France","Germany","Canada","Japan") & RequestYear==2015)]
+       ,aes(log(aid_per_personc), ExtPovHC, colour=RequestYear))+
+      geom_point()+
+      ggtitle("Aid Commitments vs Share in Poverty 2015")+
+      theme_bw()+
+      ylab("Share of recipient \npopulation in extreme poverty")+
+      xlab("ODA commitments per capita (logged)")+
+      theme(legend.position="none")+
+      facet_wrap(~DonorName,ncol=3)
+      
+ggplot(povcal[which(povcal$DonorName %in% c("United Kingdom") & RequestYear==2015)]
+       ,aes(log(aid_per_personc), ExtPovHC, colour=RequestYear))+
+  geom_point()+
+  ggtitle("Aid Commitments vs Share in Poverty 2015")+
+  theme_bw()+
+  ylab("Share of recipient \npopulation in extreme poverty")+
+  xlab("ODA commitments per capita (logged)")+
+  theme(legend.position="none")
+
 
 UK2015=povcal[which(povcal$DonorName=="United Kingdom" & povcal$RequestYear==2015),]
 plot(log(UK2015$aid_per_person_in_p20),UK2015$P20Headcount)

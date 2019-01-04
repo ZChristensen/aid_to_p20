@@ -1,4 +1,4 @@
-list.of.packages <- c("data.table","ggplot2","plyr")
+list.of.packages <- c("data.table","ggplot2","plyr","zoo")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 lapply(list.of.packages, require, character.only=T)
@@ -36,16 +36,51 @@ crs$RecipientName[which(crs$RecipientName=="Micronesia")]="Micronesia, Federated
 setnames(crs,"RecipientName","CountryName")
 setnames(crs,"Year","RequestYear")
 povcal=povcalcuts[,c("P20pop","CountryName","RequestYear","ExtPovHC","P20Headcount","pop")]
-povcal=join(crs,povcal,by=c("CountryName","RequestYear"))
+uniquerecip=unique(povcalcuts$CountryName)
+years=c(1981:2017)
+expand.df=expand.grid(uniquerecip,years)
+names(expand.df)=c("CountryName","RequestYear")
+povcal.expand=merge(povcal,expand.df,by=c("CountryName","RequestYear"),all=T)
+
+
+dat=data.table(povcal.expand)[,.(
+  RequestYear=RequestYear
+  ,P20Headcount=na.approx(P20Headcount,rule=2)
+  ,pop=na.approx(pop,rule=2)
+),by=.(CountryName)]
+
+povcal=join(crs,dat,by=c("CountryName","RequestYear"))
+
+
 
 povcal$aid_per_personc=povcal$commitment_value/povcal$pop
 povcal$aid_per_persond=povcal$disbursement_value/povcal$pop
-povcal$highP20=0
-povcal$highP20[which(povcal$P20Headcount>.2)]=1
-povcal$highP20[which(is.na(povcal$P20Headcount))]=NA
-povcal$highP20[which(povcal$CountryName %in% c("Afghanistan","Somalia","Eritrea"))]=1
+povcal$highP20=2
+povcal$highP20[which(povcal$P20Headcount>.2)]=3
+povcal$highP20[which(povcal$CountryName %in% c(
+  "Europe, regional"
+  , "South of Sahara, regional"
+  , "Africa, regional"
+  , "West Indies, regional" 
+  , "North & Central America, regional"          
+  , "America, regional"
+  , "Asia, regional"                       
+  , "Oceania, regional"                    
+  , "Far East Asia, regional" 
+  , "Middle East, regional"                
+  , "South America, regional"   
+  , "North of Sahara, regional"            
+  , "Central Asia, regional"   
+  , "South & Central Asia, regional" 
+  , "South Asia, regional"
+))] =1
+povcal$highP20[which(povcal$CountryName %in% c("Afghanistan","Somalia","Eritrea","Democratic People's Republic of Korea"))]=1
 
-povcal=povcal[which(povcal$RequestYear %in% c(2015, 2013, 2012, 2011, 2010, 2008, 2005, 2002)),]
+povcal$highP20=factor(povcal$highP20,levels=c(1,2,3),labels=c("regional aid", "other countries","high P20 headcounts"))
+
+
+
+# povcal=povcal[which(povcal$RequestYear %in% c(2015, 2013, 2012, 2011, 2010, 2008, 2005, 2002)),]
 
 aidpercap = data.table(povcal)[
   ,.(
@@ -107,6 +142,7 @@ aidtotal = data.table(povcal)[
 aidtotalhighP20=join(aidtotalhighP20,aidtotal,by=c("DonorName","RequestYear"))
 aidtotalhighP20$share_commitments=aidtotalhighP20$commitment_value/aidtotalhighP20$commitment_value_total
 aidtotalhighP20=aidtotalhighP20[order(DonorName,RequestYear,highP20),]
+aidtotalhighP20$highP20=factor(aidtotalhighP20$highP20)
 
 ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom")),], aes(y=share_commitments,x=RequestYear,fill=highP20))+
   geom_bar(stat="identity")+
@@ -121,3 +157,23 @@ ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Ki
   xlab("")+
   theme(legend.title=element_blank())+
   ggtitle("UK ODA to countries with high P20 headcounts")
+
+ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom","United States","France","Germany","Japan","Canada")),], aes(y=commitment_value,x=RequestYear))+
+  geom_bar(stat="identity")+
+  ylab("Share Total Aid Commitments")+
+  xlab("")+
+  theme_bw()+
+  theme(legend.title=element_blank())+
+  ggtitle("ODA to countries left behind")+
+  facet_wrap(~DonorName,ncol=3,scales="free_x")+
+  scale_y_continuous(labels=scales::dollar)
+
+ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom","United States","France","Germany","Japan","Canada")),], aes(y=share_commitments,x=RequestYear,fill=highP20,group=highP20))+
+  geom_area(stat="identity")+
+  ylab("Share Total Aid Commitments")+
+  xlab("")+
+  theme_bw()+
+  theme(legend.title=element_blank())+
+  ggtitle("ODA to countries with high P20 headcounts")+
+  facet_wrap(~DonorName,ncol=3,scales="free_x")+
+  scale_y_continuous(labels=scales::percent)

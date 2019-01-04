@@ -108,4 +108,3 @@ ggplot(data=aidbyclb[which(aidbyclb$RequestYear>2000 & DonorName %in% c("United 
   xlab("")+
   theme(legend.title=element_blank())+
   ggtitle("UK ODA to countries left behind")
-

@@ -102,9 +102,10 @@ ggplot(data=aidbyclb[which(aidbyclb$RequestYear>2010 & DonorName %in% c("United 
   #                    labels=c("Countries left behind", "Other countries"),
   #                    guide="legend")
 
-ggplot(data=aidbyclb[which(aidbyclb$RequestYear>2010 & DonorName %in% c("United Kingdom")),], aes(y=commitment_share,x=RequestYear,fill=clb))+
+ggplot(data=aidbyclb[which(aidbyclb$RequestYear>2000 & DonorName %in% c("United Kingdom")),], aes(y=commitment_share,x=RequestYear,fill=clb))+
   geom_bar(stat="identity")+
-  ylab("Total Aid Commitments (USD millions)")+
+  ylab("Share Total Aid Commitments")+
   xlab("")+
-  ggtitle("UK ODA to countries left behind and other countries")
+  theme(legend.title=element_blank())+
+  ggtitle("UK ODA to countries left behind")
 

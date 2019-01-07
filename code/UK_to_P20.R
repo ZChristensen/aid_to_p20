@@ -47,6 +47,8 @@ dat=data.table(povcal.expand)[,.(
   RequestYear=RequestYear
   ,P20Headcount=na.approx(P20Headcount,rule=2)
   ,pop=na.approx(pop,rule=2)
+  ,ExtPovHC=na.approx(ExtPovHC,rule=2)
+  ,P20pop=na.approx(P20pop, rule=2)
 ),by=.(CountryName)]
 
 povcal=join(crs,dat,by=c("CountryName","RequestYear"))
@@ -77,8 +79,24 @@ povcal$highP20[which(povcal$CountryName %in% c(
 povcal$highP20[which(povcal$CountryName %in% c("Afghanistan","Somalia","Eritrea","Democratic People's Republic of Korea"))]=1
 
 povcal$highP20=factor(povcal$highP20,levels=c(1,2,3),labels=c("regional aid", "other countries","high P20 headcounts"))
+dat$highP20=2
+dat$highP20[which(povcal$P20Headcount>.2)]=3
+
+dat$highP20=factor(dat$highP20,levels=c(1,2,3),labels=c("regional aid", "other countries","high P20 headcounts"))
+
+pops=data.table(dat)[
+  ,.(P20pop=sum(P20pop,na.rm=T)
+  ), by=.(highP20,RequestYear)
+]
+
+poptotal=data.table(dat)[
+  ,.(P20poptotal=sum(P20pop,na.rm=T))
+  , by=.(RequestYear)
+]
 
 
+pops=merge(pops,poptotal,by=c("RequestYear"))
+pops$share=pops$P20pop/pops$P20poptotal
 
 # povcal=povcal[which(povcal$RequestYear %in% c(2015, 2013, 2012, 2011, 2010, 2008, 2005, 2002)),]
 
@@ -89,6 +107,7 @@ aidpercap = data.table(povcal)[
   )
   ,by=.(DonorName,RequestYear)
   ]
+
 
 # UK=ggplot(povcal[which(povcal$DonorName %in% c("United Kingdom") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("United Kingdom")
 # US=ggplot(povcal[which(povcal$DonorName %in% c("United States") & RequestYear==2015)], aes(log(aid_per_personc), P20Headcount, colour=RequestYear))+geom_point()+ggtitle("United States")
@@ -144,23 +163,31 @@ aidtotalhighP20$share_commitments=aidtotalhighP20$commitment_value/aidtotalhighP
 aidtotalhighP20=aidtotalhighP20[order(DonorName,RequestYear,highP20),]
 aidtotalhighP20$highP20=factor(aidtotalhighP20$highP20)
 
-ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom")),], aes(y=share_commitments,x=RequestYear,fill=highP20))+
+dat=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom")),]
+dat=dat[,c("share_commitments","commitment_value","RequestYear","highP20")]
+ggplot(data=dat, aes(y=share_commitments,x=RequestYear,fill=highP20))+
   geom_bar(stat="identity")+
-  ylab("Total Aid Commitments")+
+  ylab("Aid Commitments")+
+  xlab("")+
+  theme(legend.title=element_blank())+
+  ggtitle("UK ODA to countries with high P20 headcounts")+
+  scale_y_continuous(labels=scales::percent)
+ggsave("graphics/UK_ODA_to_high_P20.png")
+write.csv(dat,"data/UK_ODA_to_high_P20.csv",row.names=F, na="")
+
+
+ggplot(data=dat[which(dat$highP20=="high P20 headcounts"),], aes(y=commitment_value,x=RequestYear))+
+  geom_bar(stat="identity")+
+  ylab("ODA Commitments \n(USD millions)")+
   xlab("")+
   theme(legend.title=element_blank())+
   ggtitle("UK ODA to countries with high P20 headcounts")
+ggsave("graphics/UK_ODA_to_high_P20_values.png")
 
-ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom") & highP20==1),], aes(y=commitment_value,x=RequestYear))+
+dat=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom","United States","France","Germany","Japan","Canada")),]
+ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom","United States","France","Germany","Japan","Canada")),], aes(y=(commitment_value/1000),x=RequestYear))+
   geom_bar(stat="identity")+
-  ylab("Total Aid Commitments (USD millions)")+
-  xlab("")+
-  theme(legend.title=element_blank())+
-  ggtitle("UK ODA to countries with high P20 headcounts")
-
-ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom","United States","France","Germany","Japan","Canada")),], aes(y=commitment_value,x=RequestYear))+
-  geom_bar(stat="identity")+
-  ylab("Share Total Aid Commitments")+
+  ylab("ODA Commitments \n(billions US$ 2015)")+
   xlab("")+
   theme_bw()+
   theme(legend.title=element_blank())+

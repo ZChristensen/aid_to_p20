@@ -15,7 +15,7 @@ setwd(wd)
 load("data/recipient_donor_year.RData")
 
 crs=crs[which(crs$Year>2000),]
-povcalcuts=read.csv("https://raw.githubusercontent.com/ZChristensen/poverty_trends/master/data/P20incometrends.csv")
+povcalcuts=read.csv("E:/git/poverty_trends/data/P20incometrends.csv")
 crs$RecipientName[which(crs$RecipientName=="China (People's Republic of)")]="China"
 crs$RecipientName[which(crs$RecipientName=="Viet Nam")]="Vietnam"
 crs$RecipientName[which(crs$RecipientName=="Democratic Republic of the Congo")]="Congo, Democratic Republic of"
@@ -163,13 +163,17 @@ aidtotalhighP20$share_commitments=aidtotalhighP20$commitment_value/aidtotalhighP
 aidtotalhighP20=aidtotalhighP20[order(DonorName,RequestYear,highP20),]
 aidtotalhighP20$highP20=factor(aidtotalhighP20$highP20)
 
+
+pal=c("#e84439","#f0826d" ,"#8f1b13")
+
 dat=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom")),]
 dat=dat[,c("share_commitments","commitment_value","RequestYear","highP20")]
 ggplot(data=dat, aes(y=share_commitments,x=RequestYear,fill=highP20))+
   geom_bar(stat="identity")+
-  ylab("Aid Commitments")+
+  ylab("Share of Aid Commitments")+
   xlab("")+
   theme(legend.title=element_blank())+
+  scale_fill_manual(values=pal)+
   ggtitle("UK ODA to countries with high P20 headcounts")+
   scale_y_continuous(labels=scales::percent)
 ggsave("graphics/UK_ODA_to_high_P20.png")
@@ -177,7 +181,7 @@ write.csv(dat,"data/UK_ODA_to_high_P20.csv",row.names=F, na="")
 
 
 ggplot(data=dat[which(dat$highP20=="high P20 headcounts"),], aes(y=commitment_value,x=RequestYear))+
-  geom_bar(stat="identity")+
+  geom_bar(stat="identity",fill="#e84439")+
   ylab("ODA Commitments \n(USD millions)")+
   xlab("")+
   theme(legend.title=element_blank())+
@@ -191,16 +195,20 @@ ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Ki
   xlab("")+
   theme_bw()+
   theme(legend.title=element_blank())+
+  scale_fill_manual(values=pal)+
   ggtitle("ODA to countries left behind")+
   facet_wrap(~DonorName,ncol=3,scales="free_x")+
   scale_y_continuous(labels=scales::dollar)
 
 ggplot(data=aidtotalhighP20[which(RequestYear>2000 & DonorName %in% c("United Kingdom","United States","France","Germany","Japan","Canada")),], aes(y=share_commitments,x=RequestYear,fill=highP20,group=highP20))+
   geom_area(stat="identity")+
-  ylab("Share Total Aid Commitments")+
+  ylab("Share ODA Commitments")+
   xlab("")+
   theme_bw()+
   theme(legend.title=element_blank())+
+  scale_fill_manual(values=pal)+
   ggtitle("ODA to countries with high P20 headcounts")+
   facet_wrap(~DonorName,ncol=3,scales="free_x")+
   scale_y_continuous(labels=scales::percent)
+ggsave("graphics/six_countries_ODA_to_high_P20.png")
+write.csv(dat,"data/six_countries_ODA_to_high_P20.csv",row.names=F, na="")
